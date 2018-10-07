@@ -1,0 +1,27 @@
+{
+    "name": "bingcool/RpcClient",
+    "description": "RpcClient for swoolefy RPC server",
+    "keywords": [
+        "swoolefy",
+        "swoole",
+        "php",
+        "RrcClient",
+        "rpc"
+    ],
+    "license": "MIT",
+    "type": "project",
+    "authors": [
+        {
+            "name": "bingcool",
+            "email": "2437667702@qq.com",
+            "role": "Engineer of php"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Rpc\\": "src/"
+        }
+    }
+
+}
