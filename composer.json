@@ -1,5 +1,5 @@
 {
-    "name": "bingcool/RpcClient",
+    "name": "bingcool/rpc-client",
     "description": "RpcClient for swoolefy RPC server",
     "keywords": [
         "swoolefy",
