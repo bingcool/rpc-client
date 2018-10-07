@@ -14,7 +14,7 @@
         {
             "name": "bingcool",
             "email": "2437667702@qq.com",
-            "role": "Engineer of php"
+            "role": "rpc-client for swoolefy"
         }
     ],
     "minimum-stability": "dev",
@@ -22,6 +22,10 @@
         "psr-4": {
             "Rpc\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Rpc\\Tests\\": "tests/"
+        }
     }
-
 }
