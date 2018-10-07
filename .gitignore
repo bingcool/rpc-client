@@ -1,0 +1,12 @@
+#sftp文件
+sftp-config.json
+#log
+*.txt
+#runtime
+*.json
+#server.pid
+*.pid
+*.lock
+*.idea
+/vendor
+
