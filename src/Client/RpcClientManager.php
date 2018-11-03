@@ -44,6 +44,12 @@ class RpcClientManager {
 	protected $is_swoole_env = false;
 
 	/**
+	 * $swoole_clients 缓存swoole\client对象，目前只使用在php-fpm和apache环境中
+	 * @var array
+	 */
+	protected $swoole_clients = [];
+
+	/**
 	 * __construct 
 	 * @param  array $setting
 	 */
@@ -101,16 +107,13 @@ class RpcClientManager {
 			$client_service->setServerSerializeType($server_serialize_type);
 			$client_service->setSwooleKeep($swoole_keep);
 			$client_service->setSwooleEnv($this->is_swoole_env);
-
-			$swoole_client = $client_service->connect();
 			if($this->is_swoole_env) {
+				$swoole_client = $client_service->connect();
 				self::$client_services[$key] = \Swoole\Serialize::pack($client_service);
 			}else {
 				self::$client_services[$key] = serialize($client_service);
 			}
-			
 		}
-
 		return $client_service;
 	}
 
@@ -128,7 +131,14 @@ class RpcClientManager {
 					$client_service = \Swoole\Serialize::unpack(self::$client_services[$key]);
 				}else {
 					$client_service = unserialize(self::$client_services[$key]);
-				}		
+					if(isset($this->swoole_clients[$key]) && is_object($this->swoole_clients[$key])) {
+						$swoole_client = $this->swoole_clients[$key];
+						$client_service->setSwooleClient($swoole_client);
+					}else {
+						$swoole_client = $client_service->connect();
+						$this->swoole_clients[$key] = $swoole_client;
+					}
+				}
 				$us = strstr(microtime(), ' ', true);
         		$client_id = intval(strval($us * 1000 * 1000) . mt_rand(100, 999));
 				if(!isset(self::$busy_client_services[$client_id])) {

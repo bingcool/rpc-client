@@ -455,6 +455,7 @@ class RpcSynclient {
             $this->client = $client;
             // 重连一次
     		$this->reConnect();
+            return $client;
     	}else if($this->haveSockets) {
             // TODO
     	}else {
@@ -472,6 +473,15 @@ class RpcSynclient {
             return $this->client;
         }
         return false;
+    }
+
+    /**
+     * setSwooleClient 
+     * @param object $swoole_client
+     */
+    public function setSwooleClient($swoole_client) {
+        $this->client = $swoole_client;
+        return true;
     }
 
     /**
@@ -773,7 +783,7 @@ class RpcSynclient {
 	}
 
 	/**
-	 * setPackLengthType  设置unpack头的类型
+	 * setUnPackLengthType  设置unpack头的类型
 	 * @return   string 
 	 */
 	public function setUnpackLengthType() {
