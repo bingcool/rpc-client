@@ -107,12 +107,7 @@ class RpcClientManager {
 			$client_service->setServerSerializeType($server_serialize_type);
 			$client_service->setSwooleKeep($swoole_keep);
 			$client_service->setSwooleEnv($this->is_swoole_env);
-			if($this->is_swoole_env) {
-				$swoole_client = $client_service->connect();
-				self::$client_services[$key] = \Swoole\Serialize::pack($client_service);
-			}else {
-				self::$client_services[$key] = serialize($client_service);
-			}
+            self::$client_services[$key] = serialize($client_service);
 		}
 		return $client_service;
 	}
@@ -126,21 +121,16 @@ class RpcClientManager {
 		if($serviceName) {
 			$key = md5($serviceName);
 			if(isset(self::$client_services[$key])) {
-				// 深度复制client_service实例
-				if($this->is_swoole_env) {
-					$client_service = \Swoole\Serialize::unpack(self::$client_services[$key]);
-				}else {
-					$client_service = unserialize(self::$client_services[$key]);
-					if(isset($this->swoole_clients[$key]) && is_object($this->swoole_clients[$key])) {
-						$swoole_client = $this->swoole_clients[$key];
-						$client_service->setSwooleClient($swoole_client);
-					}else {
-						$swoole_client = $client_service->connect();
-						$this->swoole_clients[$key] = $swoole_client;
-					}
-				}
+                $client_service = unserialize(self::$client_services[$key]);
+                if(isset($this->swoole_clients[$key]) && is_object($this->swoole_clients[$key])) {
+                    $swoole_client = $this->swoole_clients[$key];
+                    $client_service->setSwooleClient($swoole_client);
+                }else {
+                    $swoole_client = $client_service->connect();
+                    $this->swoole_clients[$key] = $swoole_client;
+                }
 				$us = strstr(microtime(), ' ', true);
-        		$client_id = intval(strval($us * 1000 * 1000) . mt_rand(100, 999));
+        		$client_id = intval(strval($us * 1000 * 1000) . $this->string(6));
 				if(!isset(self::$busy_client_services[$client_id])) {
 					self::$busy_client_services[$client_id] = $client_service;
 				}
