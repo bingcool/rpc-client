@@ -42,13 +42,7 @@ class RpcClientManager {
 	 * @var boolean
 	 */
 	protected $is_swoole_env = false;
-
-	/**
-	 * $swoole_clients 缓存swoole\client对象，目前只使用在php-fpm和apache环境中
-	 * @var array
-	 */
-	protected $swoole_clients = [];
-
+	
 	/**
 	 * __construct 
 	 * @param  array $setting
@@ -122,13 +116,7 @@ class RpcClientManager {
 			$key = md5($serviceName);
 			if(isset(self::$client_services[$key])) {
                 $client_service = unserialize(self::$client_services[$key]);
-                if(isset($this->swoole_clients[$key]) && is_object($this->swoole_clients[$key])) {
-                    $swoole_client = $this->swoole_clients[$key];
-                    $client_service->setSwooleClient($swoole_client);
-                }else {
-                    $swoole_client = $client_service->connect();
-                    $this->swoole_clients[$key] = $swoole_client;
-                }
+                $client_service->connect();
 				$us = strstr(microtime(), ' ', true);
         		$client_id = intval(strval($us * 1000 * 1000) . $this->string(6));
 				if(!isset(self::$busy_client_services[$client_id])) {

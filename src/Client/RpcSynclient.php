@@ -461,7 +461,6 @@ class RpcSynclient {
     	}else {
     		return false;
     	}
-    	return $client;
     }
 
     /**
