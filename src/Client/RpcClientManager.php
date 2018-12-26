@@ -94,8 +94,12 @@ class RpcClientManager {
 			if(isset($args['swoole_keep']) && ($args['swoole_keep'] === false || $args['swoole_keep'] == 0)) {
 				$swoole_keep = (boolean)$args['swoole_keep'];
 			}
-			$client_service = new RpcSynclient($client_pack_setting, $server_header_struct, $client_header_struct, $pack_length_key);
-			$client_service->addServer($servers, $timeout, $noblock);
+            if($this->is_swoole_env) {
+                $client_service = new RpcSwooleClient($client_pack_setting, $server_header_struct, $client_header_struct, $pack_length_key);
+            }else {
+                $client_service = new RpcSocketClient($client_pack_setting, $server_header_struct, $client_header_struct, $pack_length_key);
+            }
+            $client_service->addServer($servers, $timeout, $noblock);
 			$client_service->setClientServiceName($serviceName);
 			$client_service->setClientSerializeType($client_serialize_type);
 			$client_service->setServerSerializeType($server_serialize_type);
@@ -134,23 +138,26 @@ class RpcClientManager {
 	 * @param    string   $serviceName
 	 * @return   swoole_client
 	 */
-	public function getSwooleClients(string $serviceName = '') {
+	public function getSwooleClient(string $serviceName = '') {
 		if($serviceName) {
 			if($this->getServices($serviceName)) {
-				return $this->getServices($serviceName)->client;
+				return $this->getServices($serviceName)->getSocketClient();
 			}
 		}
 		return false;
 	}
 
 	/**
-     * multiRecv 规定时间内并行接受多个I/O的返回数据
+     * multiRecv 规定时间内并行接受多个I/O的返回数据（需要swoole扩展支持）
      * @param    int   $timeout
      * @param    int   $size
      * @param    int   $flags
      * @return   array
      */
     public function multiRecv($timeout = 30, $size = 64 * 1024, $flags = 0) {
+        if(!function_exists('swoole_client_select')) {
+            throw new \Exception("multiRecv() need swoole extension function: swoole_client_select");
+        }
         $busy_client_services = $this->getServices();
         $client_services = $busy_client_services;
         $start_time = time();
@@ -158,7 +165,7 @@ class RpcClientManager {
         while(!empty($client_services)) {
         	$read = $write = $error = $client_ids = [];
 	        foreach($client_services as $client_id=>$client_service) {
-	        	$read[] = $client_service->getSwooleClient();
+	        	$read[] = $client_service->getSocketClient();
 	        	$client_ids[] = $client_id;
 	        	$client_service->setRecvWay(RpcClientConst::MULTI_RECV);
 	        }
