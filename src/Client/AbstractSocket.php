@@ -571,13 +571,6 @@ abstract class AbstractSocket {
      * @return  array
      */
     public function getResponsePackData() {
-        if(!$this->is_swoole_env) {
-            static $pack_data;
-        }
-
-        if(isset($pack_data) && !empty($pack_data)) {
-            return $pack_data;
-        }
         $request_id = $this->getRequestId();
         if($this->isMultiRecv()) {
             // mutilRecv 并行调用获取数据

@@ -45,7 +45,7 @@ class RpcSocketClient extends AbstractSocket {
      * @param  integer $noblock
      * @return mixed
      */
-    public function connect($host = null, $port = null , $timeout = 0.5, $noblock = 0) {
+    public function connect($host = null, $port = null , $timeout = 5, $noblock = 0) {
         if(!empty($host) && !empty($port)) {
             $this->remote_servers[] = [$host, $port];
             $this->timeout = $timeout;
