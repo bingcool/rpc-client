@@ -94,17 +94,14 @@ class RpcClientManager {
 			if(isset($args['swoole_keep']) && ($args['swoole_keep'] === false || $args['swoole_keep'] == 0)) {
 				$swoole_keep = (boolean)$args['swoole_keep'];
 			}
-            if($this->is_swoole_env) {
-                $client_service = new RpcSwooleClient($client_pack_setting, $server_header_struct, $client_header_struct, $pack_length_key);
-            }else {
-                $client_service = new RpcSocketClient($client_pack_setting, $server_header_struct, $client_header_struct, $pack_length_key);
-            }
+            $client_service = new RpcStreamClient($client_pack_setting, $server_header_struct, $client_header_struct, $pack_length_key);
             $client_service->addServer($servers, $timeout, $noblock);
 			$client_service->setClientServiceName($serviceName);
 			$client_service->setClientSerializeType($client_serialize_type);
 			$client_service->setServerSerializeType($server_serialize_type);
 			$client_service->setSwooleKeep($swoole_keep);
 			$client_service->setSwooleEnv($this->is_swoole_env);
+            $client_service->setArgs($args);
             self::$client_services[$key] = serialize($client_service);
 		}
 		return $client_service;

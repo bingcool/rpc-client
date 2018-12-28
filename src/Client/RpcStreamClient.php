@@ -11,7 +11,7 @@
 
 namespace Rpc\Client;
 
-class RpcSocketClient extends AbstractSocket {
+class RpcStreamClient extends AbstractSocket {
 
     /**
      * __construct 初始化
@@ -51,14 +51,9 @@ class RpcSocketClient extends AbstractSocket {
             $this->timeout = $timeout;
         }
         if(extension_loaded('sockets')) {
-            $client = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-            if(!$client) {
-                throw new \Exception("Error Creating Socket: ".socket_strerror(socket_last_error()));
-            }
-            $this->client = $client;
             $this->reConnect();
         }else {
-            throw new \Exception("Error Creating Socket: missing socket extension, please install it");
+            throw new \Exception("Error Creating Stream: missing socket extension, please install it");
         }
     }
 
@@ -81,6 +76,7 @@ class RpcSocketClient extends AbstractSocket {
         }
         // 封装包
         $pack_data = $this->enpack($data, $header, $this->server_header_struct, $this->pack_length_key, $this->server_serialize_type);
+
         $send_result = $this->write($pack_data);
         // 发送成功
         if($send_result) {
@@ -162,7 +158,8 @@ class RpcSocketClient extends AbstractSocket {
      */
     private function paresePack($size = 2048) {
         $pack_header_length = $this->client_pack_setting['package_body_offset'];
-        $header_buff = socket_read($this->client, (int)$pack_header_length);
+        $header_buff = fread($this->client, (int)$pack_header_length);
+
         if($header_buff) {
             $client_pack_setting = $this->setUnpackLengthType();
             $header_data = unpack($client_pack_setting, $header_buff);
@@ -171,7 +168,6 @@ class RpcSocketClient extends AbstractSocket {
         }
 
         if($header_data) {
-            // 包头包含的包体长度值
             $buff_length = $header_data[$this->pack_length_key];
             $request_id = $this->getRequestId();
             $this->client_body_buff[$request_id] = '';
@@ -182,7 +178,7 @@ class RpcSocketClient extends AbstractSocket {
                 }else {
                     $buff_length = $buff_length - $size;
                 }
-                $body_buff = socket_read($this->client, $size);
+                $body_buff = fread($this->client, $size);
 
                 if(strlen($body_buff) != $size) {
                     break;
@@ -209,18 +205,23 @@ class RpcSocketClient extends AbstractSocket {
      * @return  void
      */
     public function reConnect($times = 1) {
-        foreach($this->remote_servers as $k => $servers) {
-            list($host, $port) = $servers;
-        }
+        $address = $this->tcpStreamInitializer();
+
         $err = '';
         for($i = 0; $i <= $times; $i++) {
-            $ret = socket_connect($this->client, $host, $port);
-            if($ret === false) {
-                //强制关闭，重连
-                socket_close($this->client);
-                $err = "Error Connecting Socket: " . socket_strerror(socket_last_error());
+            $client = stream_socket_client($address,$errno, $errstr, $this->timeout);
+            if($client === false) {
+                fclose($client);
+                unset($client);
+                $err = "Error Creating Stream: errCode= {$errno},errMsg= {$errstr}";
                 continue;
             }else {
+                if(isset($this->agrs['tcp_nodelay']) && function_exists('socket_import_stream')) {
+                    $socket = socket_import_stream($client);
+                    socket_set_option($socket, SOL_TCP, TCP_NODELAY, (int) $this->agrs['tcp_nodelay']);
+                }
+
+                $this->client = $client;
                 $err = '';
                 break;
             }
@@ -229,16 +230,45 @@ class RpcSocketClient extends AbstractSocket {
         if($err) {
             throw new \Exception($err);
         }
+
     }
 
     /**
-     * tcpStreamInitializer Initializes a TCP stream resource.
+     * tcpStreamInitializer  Initializes a TCP stream resource.
      * @param ParametersInterface $parameters Initialization parameters for the connection.
      * @return resource
      */
-    protected function tcpStreamInitializer() {}
+    protected function tcpStreamInitializer() {
+        foreach($this->remote_servers as $k => $servers) {
+            list($host, $port) = $servers;
+        }
+
+        if(!filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            $address = "tcp://$host:$port";
+        } else {
+            $address = "tcp://[$host]:$port";
+        }
+
+        $flags = STREAM_CLIENT_CONNECT;
+
+        if(isset($this->args['async_connect']) && $this->args['async_connect']) {
+            $flags |= STREAM_CLIENT_ASYNC_CONNECT;
+        }
+
+        if(isset($this->args['persistent'])) {
+            if(false !== $persistent = filter_var($this->args['persistent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) {
+                $flags |= STREAM_CLIENT_PERSISTENT;
+                if ($persistent === null) {
+                    $address = "{$address}/{$parameters->persistent}";
+                }
+            }
+        }
+
+        return $address;
+    }
 
     /**
+     * setReadWriteTimeout
      * @param $timeout
      */
     protected function setReadWriteTimeout($timeout) {
@@ -247,8 +277,7 @@ class RpcSocketClient extends AbstractSocket {
             $rwtimeout = $rwtimeout > 0 ? $rwtimeout : -1;
             $timeoutSeconds = floor($rwtimeout);
             $timeoutUSeconds = ($rwtimeout - $timeoutSeconds) * 1000000;
-            socket_set_option($this->client,SOL_SOCKET,SO_RCVTIMEO, array("sec"=> $timeoutSeconds, "usec"=> $timeoutUSeconds));
-            socket_set_block($this->client);
+            stream_set_timeout($this->client, $timeoutSeconds, $timeoutUSeconds);
         }
     }
 
@@ -259,7 +288,7 @@ class RpcSocketClient extends AbstractSocket {
      */
     protected function write($buffer) {
         while (($length = strlen($buffer)) > 0) {
-            $written = @socket_write($this->client, $buffer, $length);
+            $written = @fwrite($this->client, $buffer);
 
             if ($length === $written) {
                 return true;

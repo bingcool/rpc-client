@@ -149,6 +149,11 @@ abstract class AbstractSocket {
     protected $client_body_buff = [];
 
     /**
+     * @var array
+     */
+    protected $agrs = [];
+
+    /**
      * 定义序列化的方式
      */
     const SERIALIZE_TYPE = [
@@ -470,6 +475,20 @@ abstract class AbstractSocket {
     public function setSocketClient($sock_client) {
         $this->client = $sock_client;
         return true;
+    }
+
+    /**
+     * @param array $args
+     */
+    public function setArgs($args = []) {
+        $this->args = $args;
+    }
+
+    /**
+     * getArgs
+     */
+    public function getArgs() {
+        return $this->args;
     }
 
     /**
