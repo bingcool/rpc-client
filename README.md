@@ -1,5 +1,5 @@
 #### swoolefy RpcClient
-RpcClient 是为swoolefy框架开发的配套的rpc客户端，可以使用在swoolefy,php-fpm的环境中,而服务端目前只能支持swoolefy的rpc服务。客户端环境需要安装swoole,因为需要使用到swoole的swoole_client。具体可以查看https://www.kancloud.cn/book/bingcoolhuang/php-swoole-swoolefy/edit
+RpcClient 是为swoolefy框架开发的配套的rpc客户端，可以使用在swoolefy,php-fpm的环境中,而服务端目前只能支持swoolefy的rpc服务，在swoole中使用时支持协程。客户端环境需要安装swoole,因为需要使用到swoole的swoole_client。具体可以查看https://www.kancloud.cn/book/bingcoolhuang/php-swoole-swoolefy/edit
 
 #### 安装
 ```
