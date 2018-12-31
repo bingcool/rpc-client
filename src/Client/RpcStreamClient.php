@@ -259,7 +259,7 @@ class RpcStreamClient extends AbstractSocket {
             if(false !== $persistent = filter_var($this->args['persistent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) {
                 $flags |= STREAM_CLIENT_PERSISTENT;
                 if ($persistent === null) {
-                    $address = "{$address}/{$parameters->persistent}";
+                    $address = "{$address}/{$persistent}";
                 }
             }
         }
