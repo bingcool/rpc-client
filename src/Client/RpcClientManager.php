@@ -42,6 +42,8 @@ class RpcClientManager {
 	 * @var boolean
 	 */
 	protected $is_swoole_env = false;
+
+
 	
 	/**
 	 * __construct 
@@ -119,7 +121,7 @@ class RpcClientManager {
                 $client_service = unserialize(self::$client_services[$key]);
                 $client_service->connect();
 				$us = strstr(microtime(), ' ', true);
-        		$client_id = intval(strval($us * 1000 * 1000) . $this->string(6));
+        		$client_id = intval(strval($us * 1000 * 1000) . $this->string(12));
 				if(!isset(self::$busy_client_services[$client_id])) {
 					self::$busy_client_services[$client_id] = $client_service;
 				}
@@ -165,9 +167,10 @@ class RpcClientManager {
 	        }
 	        $ret = stream_select($read, $write, $error, 0.50);
 	        if($ret) {
-	            foreach($read as $k=>$swoole_client) {
+	            foreach($read as $k=>$socket) {
 	                $client_id = $client_ids[$k];
 	                $client_service = $client_services[$client_id];
+
 	                //记录Rpc结束请求时间,这里由于是并行的，可能时间并不会很准确的
                     if($client_service->isEnableRpcTime()) {
                         $client_service->setEndRpcTime();
@@ -188,7 +191,7 @@ class RpcClientManager {
                         // eof分包时
                         $serviceName = $client_service->getClientServiceName();
                         $unseralize_type = $client_service->getClientSerializeType();
-                        $this->response_pack_data[$serviceName] = $client_service->depackeof($data, $unseralize_type);
+                        //$this->response_pack_data[$serviceName] = $client_service->depackeof($data, $unseralize_type);
                     }
 
 	                unset($client_services[$client_id]);   
@@ -277,7 +280,7 @@ class RpcClientManager {
      * @param   array  $ignore 忽略某些字符串
      * @return string
      */
-    public function string($length = 6, $number = true, $ignore = []) {
+    public function string($length = 12, $number = true, $ignore = []) {
         $strings = 'ABCDEFGHIJKLOMNOPQRSTUVWXYZ';
         $numbers = '0123456789';           
         if($ignore && is_array($ignore)) {
@@ -302,9 +305,10 @@ class RpcClientManager {
 	 */
 	public function buildHeaderRequestId(array $header_data, $request_id_key = 'request_id', $length = 12) {
 		$time = time();
-		$key = $this->string();
+		$time_str = date("YmdHis", $time);
+		$key = $this->string(12);
         $request_id = (string)$time.$key;
-		$request_id = substr(md5($request_id), 0, $length);
+		$request_id = $time_str.substr(md5($request_id), 0, $length);
 		$header = array_merge($header_data, [$request_id_key => $request_id]);
 		return $header;
 	}
