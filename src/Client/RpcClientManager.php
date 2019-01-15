@@ -151,10 +151,7 @@ class RpcClientManager {
      * @param    int   $flags
      * @return   array
      */
-    public function multiRecv($timeout = 30, $size = 64 * 1024, $flags = 0) {
-        if(!function_exists('swoole_client_select')) {
-            throw new \Exception("multiRecv() need swoole extension function: swoole_client_select");
-        }
+    public function multiRecv($timeout = 30, $size = 2048, $flags = 0) {
         $busy_client_services = $this->getServices();
         $client_services = $busy_client_services;
         $start_time = time();
@@ -166,35 +163,34 @@ class RpcClientManager {
 	        	$client_ids[] = $client_id;
 	        	$client_service->setRecvWay(RpcClientConst::MULTI_RECV);
 	        }
-	        $ret = swoole_client_select($read, $write, $error, 0.50);
+	        $ret = stream_select($read, $write, $error, 0.50);
 	        if($ret) {
 	            foreach($read as $k=>$swoole_client) {
-	                $data = $swoole_client->recv($size, $flags);
 	                $client_id = $client_ids[$k];
 	                $client_service = $client_services[$client_id];
 	                //记录Rpc结束请求时间,这里由于是并行的，可能时间并不会很准确的
                     if($client_service->isEnableRpcTime()) {
                         $client_service->setEndRpcTime();
                     }
-	                if($data) {
-	                    if($client_service->isPackLengthCheck()) {
-	                    	$response = $client_service->depack($data);
-			                list($header, $body_data) = $response;
-			                $request_id = $client_service->getRequestId();
-			                if(in_array($request_id, array_values($header))) {
-			                	$client_service->setStatusCode(RpcClientConst::ERROR_CODE_SUCCESS);
-			                	$this->response_pack_data[$request_id] = $response;
-			                }else {
-			                	$client_service->setStatusCode(RpcClientConst::ERROR_CODE_NO_MATCH);
-			                	$this->response_pack_data[$request_id] = [];
-			                }
-	                    }else {
-	                    	// eof分包时
-	                    	$serviceName = $client_service->getClientServiceName();
-	                        $unseralize_type = $client_service->getClientSerializeType();
-	                        $this->response_pack_data[$serviceName] = $client_service->depackeof($data, $unseralize_type);
-	                    }
-	                }
+
+                    if($client_service->isPackLengthCheck()) {
+                        $response = $client_service->paresePack($size);
+                        list($header, $body_data) = $response;
+                        $request_id = $client_service->getRequestId();
+                        if(in_array($request_id, array_values($header))) {
+                            $client_service->setStatusCode(RpcClientConst::ERROR_CODE_SUCCESS);
+                            $this->response_pack_data[$request_id] = $response;
+                        }else {
+                            $client_service->setStatusCode(RpcClientConst::ERROR_CODE_NO_MATCH);
+                            $this->response_pack_data[$request_id] = [];
+                        }
+                    }else {
+                        // eof分包时
+                        $serviceName = $client_service->getClientServiceName();
+                        $unseralize_type = $client_service->getClientSerializeType();
+                        $this->response_pack_data[$serviceName] = $client_service->depackeof($data, $unseralize_type);
+                    }
+
 	                unset($client_services[$client_id]);   
 	            }   
 	        }

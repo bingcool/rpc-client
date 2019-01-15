@@ -462,7 +462,7 @@ abstract class AbstractSocket {
      * @return   swoole_client
      */
     public function getSocketClient() {
-        if(is_object($this->client)) {
+        if($this->client) {
             return $this->client;
         }
         return false;
