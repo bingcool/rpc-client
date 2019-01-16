@@ -106,7 +106,7 @@ class RpcClientManager {
             $client_service->setArgs($args);
             self::$client_services[$key] = serialize($client_service);
 		}
-		return $client_service;
+		return $this;
 	}
 
 	/**
@@ -303,12 +303,15 @@ class RpcClientManager {
 	 * @param    string  $length     默认12字节
 	 * @return   array
 	 */
-	public function buildHeaderRequestId(array $header_data, $request_id_key = 'request_id', $length = 12) {
+	public function buildHeaderRequestId(array $header_data, string $request_id_key = 'request_id', int $length = 26) {
+        if($length < 26 || $length > 32 ) {
+            throw new \Exception("parmams length only in [26, 32]");
+        }
 		$time = time();
 		$time_str = date("YmdHis", $time);
 		$key = $this->string(12);
         $request_id = (string)$time.$key;
-		$request_id = $time_str.substr(md5($request_id), 0, $length);
+		$request_id = $time_str.substr(md5($request_id), 0, $length - mb_strlen($time_str,'UTF8'));
 		$header = array_merge($header_data, [$request_id_key => $request_id]);
 		return $header;
 	}
