@@ -542,10 +542,10 @@ abstract class AbstractSocket {
      * buildHeaderRequestId 发起每次请求建立一个请求串号request_id
      * @param  array    $header_data
      * @param  string   $request_id_key  默认request_id
-     * @param  int      $length          默认12字符(12字节)
+     * @param  int      $length          默认26字符(26字节)
      * @return $this
      */
-    public function buildHeaderRequestId(array $header_data, $request_id_key = 'request_id', $length = 12) {
+    public function buildHeaderRequestId(array $header_data, string $request_id_key = 'request_id', int $length = 26) {
         $this->request_header = RpcClientManager::getInstance()->buildHeaderRequestId($header_data, $request_id_key, $length);
         return $this;
     }
