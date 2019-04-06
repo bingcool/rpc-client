@@ -205,11 +205,11 @@ class RpcStreamClient extends AbstractSocket {
      * @return  void
      */
     public function reConnect($times = 1) {
-        $address = $this->tcpStreamInitializer();
+        list($address, $flags) = $this->tcpStreamInitializer();
 
         $err = '';
         for($i = 0; $i <= $times; $i++) {
-            $client = stream_socket_client($address,$errno, $errstr, $this->timeout);
+            $client = stream_socket_client($address,$errno, $errstr, $this->timeout, $flags);
             if($client === false) {
                 fclose($client);
                 unset($client);
@@ -235,8 +235,7 @@ class RpcStreamClient extends AbstractSocket {
 
     /**
      * tcpStreamInitializer  Initializes a TCP stream resource.
-     * @param ParametersInterface $parameters Initialization parameters for the connection.
-     * @return resource
+     * @return array
      */
     protected function tcpStreamInitializer() {
         foreach($this->remote_servers as $k => $servers) {
@@ -259,12 +258,12 @@ class RpcStreamClient extends AbstractSocket {
             if(false !== $persistent = filter_var($this->args['persistent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) {
                 $flags |= STREAM_CLIENT_PERSISTENT;
                 if ($persistent === null) {
-                    $address = "{$address}/{$persistent}";
+                    $address = "{$address}/{$this->args['persistent']}";
                 }
             }
         }
 
-        return $address;
+        return [$address, $flags];
     }
 
     /**
