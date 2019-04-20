@@ -111,6 +111,11 @@ abstract class AbstractSocket {
     protected $swoole_keep = true;
 
     /**
+     * @var bool
+     */
+    protected $persistent = false;
+
+    /**
      * $ERROR_CODE
      */
     protected $status_code;
@@ -354,6 +359,23 @@ abstract class AbstractSocket {
     }
 
     /**
+     * @return mixed
+     */
+    public function isPersistent() {
+        if(isset($this->agrs['persistent'])) {
+            $this->persistent = filter_var($this->agrs['persistent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        }
+        return $this->persistent;
+    }
+
+    /**
+     * disConnect()
+     */
+    public function disConnect() {
+        unset($this->client);
+    }
+
+    /**
      * 设置请求的开始时间，单位us
      */
     public function setStartRpcTime() {
@@ -425,17 +447,24 @@ abstract class AbstractSocket {
      * @param    integer   $time
      * @param    array     $header
      * @param    \Closure  $callable
-     * @return
+     * @return   void;
      */
     public function heartbeat(int $time = 10 * 1000, array $header = [], $callable) {
-        if($this->isSwooleEnv() && $this->isSwooleKeep()) {
+        if($this->isSwooleEnv() && ($this->isSwooleKeep() || $this->isPersistent())) {
             swoole_timer_tick($time, function($timer_id, $header) use ($callable) {
-                $this->waitCall('Swoolefy\\Core\\BService::ping', 'ping', $header);
+                try{
+                    $this->waitCall('Swoolefy\\Core\\BService::ping', 'ping', $header);
+                }catch (\Exception $e) {
+                    $this->disConnect();
+                    $this->reConnect();
+                    $this->waitCall('Swoolefy\\Core\\BService::ping', 'ping', $header);
+                }
                 list($header, $data) = $this->waitRecv(3);
                 if($data && $callable instanceof \Closure) {
-                    return call_user_func_array($callable->bindTo($this, __CLASS__), [$data, $timer_id]);
+                    //return call_user_func_array($callable->bindTo($this, __CLASS__), [$data, $timer_id]);
+                    return $callable->call($this, $data, $timer_id);
                 }
-                return;
+                return null;
             }, $header);
         }
     }

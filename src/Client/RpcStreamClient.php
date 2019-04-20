@@ -43,6 +43,7 @@ class RpcStreamClient extends AbstractSocket {
      * @param  string  $port
      * @param  float   $tomeout
      * @param  integer $noblock
+     * @throws \Exception
      * @return mixed
      */
     public function connect($host = null, $port = null , $timeout = 0.5, $noblock = 0) {
@@ -62,7 +63,7 @@ class RpcStreamClient extends AbstractSocket {
      * @param   string   $callable
      * @param   mixed    $params数据序列化模式
      * @param   array    $header  数据包头数据，如果要传入该参数，则必须是由buildHeaderRequestId()函数产生返回的数据
-     * @return  boolean
+     * @return  mixed
      */
     public function waitCall($callable, $params, array $header = []) {
         $this->parseCallable($callable);
@@ -89,6 +90,7 @@ class RpcStreamClient extends AbstractSocket {
             $this->setStatusCode(RpcClientConst::ERROR_CODE_SEND_SUCCESS);
             return $this;
         }else {
+            $this->disConnect();
             // 重连一次
             $this->reConnect();
             // 重发一次
@@ -114,6 +116,7 @@ class RpcStreamClient extends AbstractSocket {
      * @param    float $timeout
      * @param    int  $size
      * @param    int  $flags
+     * @throws   \Exception
      * @return   array
      */
     public function waitRecv($timeout = 15, $size = 2048, $flags = 0) {
@@ -202,10 +205,16 @@ class RpcStreamClient extends AbstractSocket {
     /**
      * reConnect  最多尝试重连次数，默认尝试重连1次
      * @param   int  $times
-     * @return  void
+     * @throws \Exception
+     * @return  mixed
      */
     public function reConnect($times = 1) {
         list($address, $flags) = $this->tcpStreamInitializer();
+        if($this->isSwooleEnv() && $this->isPersistent()) {
+            if(is_object($this->client)) {
+                return;
+            }
+        }
 
         $err = '';
         for($i = 0; $i <= $times; $i++) {
@@ -220,7 +229,6 @@ class RpcStreamClient extends AbstractSocket {
                     $socket = socket_import_stream($client);
                     socket_set_option($socket, SOL_TCP, TCP_NODELAY, (int) $this->agrs['tcp_nodelay']);
                 }
-
                 $this->client = $client;
                 $err = '';
                 break;
@@ -284,6 +292,7 @@ class RpcStreamClient extends AbstractSocket {
      * write Performs a write operation over the stream of the buffer containing a
      * command serialized with the Redis wire protocol.
      * @param string $buffer Representation of a command in the Redis wire protocol.
+     * @throws \Exception
      */
     protected function write($buffer) {
         while (($length = strlen($buffer)) > 0) {
