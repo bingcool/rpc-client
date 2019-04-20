@@ -362,10 +362,14 @@ abstract class AbstractSocket {
      * @return mixed
      */
     public function isPersistent() {
-        if(isset($this->agrs['persistent'])) {
-            $this->persistent = filter_var($this->agrs['persistent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-        }
         return $this->persistent;
+    }
+
+    /**
+     * @param bool $persistent
+     */
+    public function setPersistent(bool $persistent = false) {
+        $this->persistent = $persistent;
     }
 
     /**
@@ -450,6 +454,9 @@ abstract class AbstractSocket {
      * @return   void;
      */
     public function heartbeat(int $time = 10 * 1000, array $header = [], $callable) {
+        // 心跳，则该client_service强制长连接
+        $this->setPersistent(true);
+        $this->args['persistent'] = true;
         if($this->isSwooleEnv() && ($this->isSwooleKeep() || $this->isPersistent())) {
             swoole_timer_tick($time, function($timer_id, $header) use ($callable) {
                 try{
@@ -479,12 +486,12 @@ abstract class AbstractSocket {
      */
     abstract public function connect($host = null, $port = null , $timeout = 0.5, $noblock = 0);
 
-     /**
-      * reConnect  最多尝试重连次数，默认尝试重连1次
-      * @param   int  $times
-      * @return  void
-      */
-     abstract public function reConnect($times = 1);
+    /**
+     * reConnect  最多尝试重连次数，默认尝试重连1次
+     * @param   int  $times
+     * @return  void
+     */
+    abstract public function reConnect($times = 1);
 
     /**
      * getSocketClient 获取当前的socket_client实例
@@ -724,6 +731,7 @@ abstract class AbstractSocket {
      * encode 数据序列化
      * @param   mixed   $data
      * @param   int     $seralize_type
+     * @throws \Exception
      * @return  string
      */
     public function encode($data, $serialize_type = self::DECODE_JSON) {
@@ -754,6 +762,7 @@ abstract class AbstractSocket {
      * decode 数据反序列化
      * @param    string   $data
      * @param    mixed    $unseralize_type
+     * @throws   \Exception
      * @return   mixed
      */
     public function decode($data, $unserialize_type = self::DECODE_JSON) {
