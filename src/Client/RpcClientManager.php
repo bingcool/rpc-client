@@ -128,7 +128,7 @@ class RpcClientManager {
      * @param    String   $serviceName
      * @return   object|array
      */
-    public function getServices(string $serviceName = '') {
+    public function getServices(string $serviceName = '', bool $persistent = false) {
         if($serviceName) {
             $key = md5($serviceName);
             if(isset(self::$client_services[$key])) {
@@ -136,8 +136,11 @@ class RpcClientManager {
                 $client_service->connect();
                 $us = strstr(microtime(), ' ', true);
                 $client_id = intval(strval($us * 1000 * 1000) . $this->string(12));
-                if(!isset(self::$busy_client_services[$client_id])) {
-                    self::$busy_client_services[$client_id] = $client_service;
+                $client_service->setClientId($client_id);
+                if(!$persistent) {
+                    if(!isset(self::$busy_client_services[$client_id])) {
+                        self::$busy_client_services[$client_id] = $client_service;
+                    }
                 }
                 return $client_service;
             }
@@ -153,8 +156,9 @@ class RpcClientManager {
      */
     public function getSwooleClient(string $serviceName = '') {
         if($serviceName) {
-            if($this->getServices($serviceName)) {
-                return $this->getServices($serviceName)->getSocketClient();
+            $client_service = $this->getServices($serviceName);
+            if($client_service) {
+                return $client_service->getSocketClient();
             }
         }
         return false;
@@ -169,11 +173,12 @@ class RpcClientManager {
             return self::$persistent_client_services[$client_key];
         }
         //长连接，则该client_service强制长连接
-        $client_service = $this->getServices($serviceName);
+        $client_service = $this->getServices($serviceName, true);
         $client_service->setPersistent(true);
         $args = array_merge($client_service->getArgs(), ['persistent' => true]);
         $client_service->setArgs($args);
         self::$persistent_client_services[$client_key] = $client_service;
+        $this->destroyBusyClient($client_service->getClientId());
         return $client_service;
     }
 
@@ -184,17 +189,27 @@ class RpcClientManager {
      * @param    int   $flags
      * @return   array
      */
-    public function multiRecv($timeout = 30, $size = 2048, $flags = 0) {
-        $busy_client_services = $this->getServices();
-        $client_services = $busy_client_services;
+    public function multiRecv($client_services = [], $timeout = 30, $size = 2048, $flags = 0) {
+        if(!$client_services) {
+            throw new \Exception("client_services params must be setted client", 1);
+        }
         $start_time = time();
-        $this->response_pack_data = [];
+        $group_multi_id = $this->setClientMultiKey($client_services);
+        $this->response_pack_data[$group_multi_id] = [];
+        if(extension_loaded('swoole') && function_exists('defer') && defined('SWOOLEFY_VERSION') && class_exists('Swoolefy\\MPHP')) {
+            defer(function() use($group_multi_id) {
+                if(isset($this->response_pack_data[$group_multi_id])) {
+                    unset($this->response_pack_data[$group_multi_id]);
+                }
+            });
+        }
         while(!empty($client_services)) {
             $read = $write = $error = $client_ids = [];
             foreach($client_services as $client_id=>$client_service) {
                 $read[] = $client_service->getSocketClient();
                 $client_ids[] = $client_id;
                 $client_service->setRecvWay(RpcClientConst::MULTI_RECV);
+                $client_service->setGroupMultiId($group_multi_id);
             }
             $ret = stream_select($read, $write, $error, 0.50);
             if($ret) {
@@ -213,10 +228,10 @@ class RpcClientManager {
                         $request_id = $client_service->getRequestId();
                         if(in_array($request_id, array_values($header))) {
                             $client_service->setStatusCode(RpcClientConst::ERROR_CODE_SUCCESS);
-                            $this->response_pack_data[$request_id] = $response;
+                            $this->response_pack_data[$group_multi_id][$request_id] = $response;
                         }else {
                             $client_service->setStatusCode(RpcClientConst::ERROR_CODE_NO_MATCH);
-                            $this->response_pack_data[$request_id] = [];
+                            $this->response_pack_data[$group_multi_id][$request_id] = [];
                         }
                     }else {
                         // eof分包时
@@ -235,23 +250,45 @@ class RpcClientManager {
                 foreach($client_services as $client_id=>$timeout_client_service) {
                     $request_id = $timeout_client_service->getRequestId();
                     $timeout_client_service->setStatusCode(RpcClientConst::ERROR_CODE_CALL_TIMEOUT);
-                    $this->response_pack_data[$request_id] = [];
+                    $this->response_pack_data[$group_multi_id][$request_id] = [];
                     unset($client_services[$client_id]);
                 }
                 break;
             }
         }
         // client获取数据完成后，释放工作的client_services的实例
-        $this->destroyBusyClient();
-        return $this->response_pack_data;
+        foreach ($client_ids as $k => $client_id) {
+            $this->destroyBusyClient($client_id);
+        }
+        return $this->response_pack_data[$group_multi_id];
     }
+
+    /**
+     * 
+     * @param array $client_services
+     */ 
+    protected function setClientMultiKey($client_services = []) {
+        $group_multi_id = '';
+        foreach($client_services as $client_service) {
+            $group_multi_id .= $client_service->getClientId();
+        }
+        return md5($group_multi_id);
+    } 
+
 
     /**
      * getAllResponseData 获取所有调用请求的swoole_client_select的I/O响应包数据
      * @return   array
      */
-    public function getAllResponsePackData() {
-        return $this->response_pack_data;
+    public function getAllResponsePackData($group_multi_id = null) {
+        if(is_array($group_multi_id)) {
+            $group_multi_id = $this->setClientMultiKey($group_multi_id);
+        }
+
+        if(isset($this->response_pack_data[$group_multi_id])) {
+            return $this->response_pack_data[$group_multi_id];
+        }
+        return $this->response_pack_data; 
     }
 
     /**
@@ -286,8 +323,14 @@ class RpcClientManager {
      * eg $client = RpcClientManager::getInstance()->getServices('productService'); $client这个变量引用实例
      * @return  void
      */
-    public function destroyBusyClient() {
-        self::$busy_client_services = [];
+    public function destroyBusyClient($client_id = null) {
+        if($client_id) {
+            if(isset(self::$busy_client_services[$client_id])) {
+                unset(self::$busy_client_services[$client_id]);
+            }
+        }else {
+            self::$busy_client_services = [];
+        }
     }
 
     /**

@@ -132,7 +132,7 @@ class RpcStreamClient extends AbstractSocket {
             $this->setEndRpcTime();
         }
         // client获取数据完成后，释放工作的client_services的实例
-        RpcClientManager::getInstance()->destroyBusyClient();
+        RpcClientManager::getInstance()->destroyBusyClient($this->getClientId());
         $request_id = $this->getRequestId();
         if(isset($data)) {
             if($this->is_pack_length_type) {

@@ -154,6 +154,18 @@ abstract class AbstractSocket {
     protected $client_body_buff = [];
 
     /**
+     * $client_id 每个client_service的唯一id
+     * @var null
+     */
+    protected $client_id = null;
+
+    /**
+     * $group_multi_id 并行调用分组id
+     * @var null
+     */
+    protected $group_multi_id = null;
+
+    /**
      * @var array
      */
     protected $agrs = [];
@@ -514,6 +526,40 @@ abstract class AbstractSocket {
     }
 
     /**
+     * setClientId 
+     * @param string $client_id
+     */
+    public function setClientId(string $client_id) {
+        $this->client_id = $client_id;
+        return true;
+    }
+
+    /**
+     * getClientId
+     * @return string
+     */
+    public function getClientId() {
+        return $this->client_id;
+    }
+
+    /**
+     * setGroupMultiId 并行调用所属分组id
+     * @param string|null $client_multi_id [description]
+     */
+    public function setGroupMultiId(string $group_multi_id = null) {
+        $this->group_multi_id = $group_multi_id;
+        return true;
+    }
+
+    /**
+     * getGroupMultiId
+     * @return string
+     */
+    public function getGroupMultiId() {
+        return $this->group_multi_id;
+    }
+
+    /**
      * @param array $args
      */
     public function setArgs($args = []) {
@@ -629,7 +675,7 @@ abstract class AbstractSocket {
         $request_id = $this->getRequestId();
         if($this->isMultiRecv()) {
             // mutilRecv 并行调用获取数据
-            $response_pack_data = RpcClientManager::getInstance()->getAllResponsePackData();
+            $response_pack_data = RpcClientManager::getInstance()->getAllResponsePackData($this->getGroupMultiId());
         }else {
             // waitRecv 阻塞调用时获取数据
             $response_pack_data = $this->response_pack_data;
