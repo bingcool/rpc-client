@@ -49,7 +49,10 @@ class RpcClientManager {
      */
     protected $is_swoole_env = false;
 
-
+    /**
+     * @var array
+     */
+    protected $response_pack_data = [];
 
     /**
      * __construct
@@ -152,7 +155,7 @@ class RpcClientManager {
     /**
      * getSwooleClient 获取swoole_client实例
      * @param    string   $serviceName
-     * @return   swoole_client
+     * @return   mixed
      */
     public function getSwooleClient(string $serviceName = '') {
         if($serviceName) {
@@ -187,6 +190,7 @@ class RpcClientManager {
      * @param    int   $timeout
      * @param    int   $size
      * @param    int   $flags
+     * @throws   \Exception
      * @return   array
      */
     public function multiRecv($client_services = [], $timeout = 30, $size = 2048, $flags = 0) {
@@ -296,7 +300,7 @@ class RpcClientManager {
      * @param   object  $client_service
      * @return  array
      */
-    public function getResponsePackData(RpcSynclient $client_service) {
+    public function getResponsePackData(AbstractSocket $client_service) {
         return $client_service->getResponsePackData();
     }
 
@@ -305,7 +309,7 @@ class RpcClientManager {
      * @param   object  $client_service
      * @return  array
      */
-    public function getResponsePackBody(RpcSynclient $client_service) {
+    public function getResponsePackBody(AbstractSocket $client_service) {
         return $client_service->getResponsePackBody();
     }
 
@@ -314,7 +318,7 @@ class RpcClientManager {
      * @param   object  $client_service
      * @return  array
      */
-    public function getResponsePackHeader(RpcSynclient $client_service) {
+    public function getResponsePackHeader(AbstractSocket $client_service) {
         return $client_service->getResponsePackHeader();
     }
 
@@ -375,6 +379,7 @@ class RpcClientManager {
      * @param    array   $header_data
      * @param    string  $request_id_key
      * @param    string  $length     默认12字节
+     * @throws   \Exception
      * @return   array
      */
     public function buildHeaderRequestId(array $header_data, string $request_id_key = 'request_id', int $length = 26) {

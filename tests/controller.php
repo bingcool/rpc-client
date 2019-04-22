@@ -17,7 +17,7 @@ class controller {
 
 		$client2 = RpcClientManager::getInstance()->getServices('productService')->buildHeaderRequestId($header)->waitCall($callable, $params);
 
-		$res =  RpcClientManager::getInstance()->multiRecv();
+		$res =  RpcClientManager::getInstance()->multiRecv([$client1, $client2]);
 
 		var_dump($res);
 

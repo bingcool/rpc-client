@@ -72,7 +72,7 @@ $heart_header_struct = array(
 
 // 注册产品服务
 $ser = RpcClientManager::getInstance()->registerService('productService', $serviceConfig1, $client_setting1, $server_header_struct1, $client_header_struct1, [
-	'swoole_keep' => false
+
 ]);
 
 $obj = new \Rpc\Tests\controller();
