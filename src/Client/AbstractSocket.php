@@ -168,7 +168,7 @@ abstract class AbstractSocket {
     /**
      * @var array
      */
-    protected $agrs = [];
+    protected $args = [];
 
     /**
      * 定义序列化的方式
@@ -490,7 +490,7 @@ abstract class AbstractSocket {
 
     /**
      * connect 连接
-     * @param  syting  $host
+     * @param  string  $host
      * @param  string  $port
      * @param  float   $tomeout
      * @param  integer $noblock
@@ -507,7 +507,7 @@ abstract class AbstractSocket {
 
     /**
      * getSocketClient 获取当前的socket_client实例
-     * @return   swoole_client
+     * @return   mixed
      */
     public function getSocketClient() {
         if($this->client) {
@@ -867,6 +867,13 @@ abstract class AbstractSocket {
      */
     public function close($isforce = false) {
         return $this->client->close($isforce);
+    }
+
+    /**
+     * __destruct
+     */
+    public function __destruct() {
+        RpcClientManager::getInstance()->destroyClientServicePackData($this->group_multi_id);
     }
 
     /**

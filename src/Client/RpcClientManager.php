@@ -157,14 +157,8 @@ class RpcClientManager {
      * @param    string   $serviceName
      * @return   mixed
      */
-    public function getSwooleClient(string $serviceName = '') {
-        if($serviceName) {
-            $client_service = $this->getServices($serviceName);
-            if($client_service) {
-                return $client_service->getSocketClient();
-            }
-        }
-        return false;
+    public function getSwooleClient(AbstractSocket $client_service) {
+        return $client_service->getSocketClient();
     }
 
     /**
@@ -193,19 +187,21 @@ class RpcClientManager {
      * @throws   \Exception
      * @return   array
      */
-    public function multiRecv($client_services = [], $timeout = 30, $size = 2048, $flags = 0) {
+    public function multiRecv(array $client_services = [], int $timeout = 30, int $size = 2048, int $flags = 0) {
         if(!$client_services) {
             throw new \Exception("client_services params must be setted client", 1);
         }
         $start_time = time();
-        $group_multi_id = $this->setClientMultiKey($client_services);
+        $group_multi_id = $this->createGroupMultiId($client_services);
         $this->response_pack_data[$group_multi_id] = [];
         if(extension_loaded('swoole') && function_exists('defer') && defined('SWOOLEFY_VERSION') && class_exists('Swoolefy\\MPHP')) {
-            defer(function() use($group_multi_id) {
-                if(isset($this->response_pack_data[$group_multi_id])) {
-                    unset($this->response_pack_data[$group_multi_id]);
-                }
-            });
+            if(\co::getCid() > 0) {
+                defer(function() use($group_multi_id) {
+                    if(isset($this->response_pack_data[$group_multi_id])) {
+                        unset($this->response_pack_data[$group_multi_id]);
+                    }
+                });
+            }
         }
         while(!empty($client_services)) {
             $read = $write = $error = $client_ids = [];
@@ -271,28 +267,44 @@ class RpcClientManager {
      * 
      * @param array $client_services
      */ 
-    protected function setClientMultiKey($client_services = []) {
+    protected function createGroupMultiId($client_services = []) {
         $group_multi_id = '';
         foreach($client_services as $client_service) {
             $group_multi_id .= $client_service->getClientId();
         }
         return md5($group_multi_id);
-    } 
+    }
 
+    /**
+     * @param string $group_multi_id
+     */
+    public function destroyClientServicePackData(string $group_multi_id = null) {
+        if($group_multi_id) {
+            if(isset($this->response_pack_data[$group_multi_id])) {
+                unset($this->response_pack_data[$group_multi_id]);
+            }
+        }
+    }
 
     /**
      * getAllResponseData 获取所有调用请求的swoole_client_select的I/O响应包数据
+     * @throws   \Exception
      * @return   array
      */
     public function getAllResponsePackData($group_multi_id = null) {
-        if(is_array($group_multi_id)) {
-            $group_multi_id = $this->setClientMultiKey($group_multi_id);
+        if(is_array($group_multi_id) && !empty($group_multi_id)) {
+            $client_service = $group_multi_id[0];
+            if($client_service instanceof AbstractSocket) {
+                $group_multi_id = $this->createGroupMultiId($group_multi_id);
+            }else {
+                throw new \Exception("client_service must instanceof AbstractSocket class");
+            }
         }
 
-        if(isset($this->response_pack_data[$group_multi_id])) {
+        if(is_string($group_multi_id) && isset($this->response_pack_data[$group_multi_id])) {
             return $this->response_pack_data[$group_multi_id];
         }
-        return $this->response_pack_data; 
+        return $this->response_pack_data;
     }
 
     /**
