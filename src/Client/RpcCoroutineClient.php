@@ -12,36 +12,10 @@
 namespace Rpc\Client;
 
 class RpcCoroutineClient extends AbstractSocket {
-    /**
-     * __construct 初始化
-     * @param array $setting
-     */
-    public function __construct(
-        array $setting = [],
-        array $server_header_struct = [],
-        array $client_header_struct = [],
-        string $pack_length_key = 'length'
-    ) {
-        $this->client_pack_setting = array_merge($this->client_pack_setting, $setting);
-        $this->server_header_struct = array_merge($this->server_header_struct, $server_header_struct);
-        $this->client_header_struct = $client_header_struct;
-        $this->pack_length_key = $pack_length_key;
-        $this->haveSwoole = extension_loaded('swoole');
-        $this->haveSockets = extension_loaded('sockets');
-
-        if(isset($this->client_pack_setting['open_length_check']) && isset($this->client_pack_setting['package_length_type'])) {
-            $this->is_pack_length_type = true;
-        }else {
-            // 使用eof方式分包
-            $this->is_pack_length_type = false;
-            $this->pack_eof = $this->client_pack_setting['package_eof'];
-        }
-    }
-
 
     /**
      * connect 连接
-     * @param  syting  $host
+     * @param  string  $host
      * @param  string  $port
      * @param  float   $tomeout
      * @param  integer $noblock

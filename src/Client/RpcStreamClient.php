@@ -14,32 +14,8 @@ namespace Rpc\Client;
 class RpcStreamClient extends AbstractSocket {
 
     /**
-     * __construct 初始化
-     * @param array $setting
-     */
-    public function __construct(
-        array $setting = [],
-        array $server_header_struct = [],
-        array $client_header_struct = [],
-        string $pack_length_key = 'length'
-    ) {
-        $this->client_pack_setting = array_merge($this->client_pack_setting, $setting);
-        $this->server_header_struct = array_merge($this->server_header_struct, $server_header_struct);
-        $this->client_header_struct = $client_header_struct;
-        $this->pack_length_key = $pack_length_key;
-
-        if(isset($this->client_pack_setting['open_length_check']) && isset($this->client_pack_setting['package_length_type'])) {
-            $this->is_pack_length_type = true;
-        }else {
-            // 使用eof方式分包
-            $this->is_pack_length_type = false;
-            $this->pack_eof = $this->client_pack_setting['package_eof'];
-        }
-    }
-
-    /**
      * connect 连接
-     * @param  syting  $host
+     * @param  string  $host
      * @param  string  $port
      * @param  float   $tomeout
      * @param  integer $noblock
@@ -205,7 +181,7 @@ class RpcStreamClient extends AbstractSocket {
     /**
      * reConnect  最多尝试重连次数，默认尝试重连1次
      * @param   int  $times
-     * @throws \Exception
+     * @throws  \Exception
      * @return  mixed
      */
     public function reConnect($times = 1) {
@@ -220,14 +196,17 @@ class RpcStreamClient extends AbstractSocket {
         for($i = 0; $i <= $times; $i++) {
             $client = stream_socket_client($address,$errno, $errstr, $this->timeout, $flags);
             if($client === false) {
-                fclose($client);
                 unset($client);
                 $err = "Error Creating Stream: errCode= {$errno},errMsg= {$errstr}";
                 continue;
             }else {
-                if(isset($this->agrs['tcp_nodelay']) && function_exists('socket_import_stream')) {
+                if(isset($this->args['tcp_nodelay']) && function_exists('socket_import_stream')) {
                     $socket = socket_import_stream($client);
-                    socket_set_option($socket, SOL_TCP, TCP_NODELAY, (int) $this->agrs['tcp_nodelay']);
+                    // 开启Nagle算法，tcp_nodelay = 0 | 1
+                    $tcp_nodelay = $this->args['tcp_nodelay'];
+                    if(isset($tcp_nodelay) && is_int($tcp_nodelay)) {
+                        socket_set_option($socket, SOL_TCP, TCP_NODELAY, $tcp_nodelay);
+                    }
                 }
                 $this->client = $client;
                 $err = '';

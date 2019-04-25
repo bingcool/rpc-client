@@ -205,7 +205,9 @@ abstract class AbstractSocket {
         }else {
             // 使用eof方式分包
             $this->is_pack_length_type = false;
-            $this->pack_eof = $this->client_pack_setting['package_eof'];
+            if(isset($this->client_pack_setting['package_eof'])) {
+                $this->pack_eof = $this->client_pack_setting['package_eof'];
+            }
         }
     }
 
@@ -460,12 +462,12 @@ abstract class AbstractSocket {
 
     /**
      * heartbeat 客户端定时心跳检测
-     * @param    integer   $time
+     * @param    int   $time
      * @param    array     $header
      * @param    \Closure  $callable
-     * @return   void;
+     * @return   void
      */
-    public function heartbeat(int $time = 10 * 1000, array $header = [], $callable) {
+    public function heartbeat(int $time = 10 * 1000, array $header = [], $callable = null) {
         // 心跳，则该client_service强制长连接
         $this->setPersistent(true);
         $this->args['persistent'] = true;
@@ -473,7 +475,7 @@ abstract class AbstractSocket {
             swoole_timer_tick($time, function($timer_id, $header) use ($callable) {
                 try{
                     $this->waitCall('Swoolefy\\Core\\BService::ping', 'ping', $header);
-                }catch (\Exception $e) {
+                }catch (\Throwable $e) {
                     $this->disConnect();
                     $this->reConnect();
                     $this->waitCall('Swoolefy\\Core\\BService::ping', 'ping', $header);
@@ -720,6 +722,7 @@ abstract class AbstractSocket {
      * @param  mixed  $serialize_type
      * @param  array  $heder_struct
      * @param  string $pack_length_key
+     * @throws \Exception
      * @return mixed
      */
     public function enpack($data, $header, array $header_struct = [], $pack_length_key ='length', $serialize_type = self::DECODE_JSON) {
@@ -788,7 +791,7 @@ abstract class AbstractSocket {
         switch($serialize_type) {
             // json
             case 1:
-                return json_encode($data);
+                return json_encode($data, JSON_UNESCAPED_UNICODE);
                 break;
             // serialize
             case 2:
@@ -866,7 +869,10 @@ abstract class AbstractSocket {
      * @return
      */
     public function close($isforce = false) {
-        return $this->client->close($isforce);
+        if(method_exists($this->client, 'close')) {
+            $this->client->close($isforce);
+        }
+        $this->disConnect();
     }
 
     /**
