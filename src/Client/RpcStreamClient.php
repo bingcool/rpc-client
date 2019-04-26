@@ -95,7 +95,7 @@ class RpcStreamClient extends AbstractSocket {
      * @throws   \Exception
      * @return   array
      */
-    public function waitRecv($timeout = 15, $size = 2048, $flags = 0) {
+    public function waitRecv(float $timeout = 10, int $size = 2048, int $flags = 0) {
         if($size > 8192) {
             throw new \Exception( 'params $size must less than 8192');
         }
@@ -135,7 +135,7 @@ class RpcStreamClient extends AbstractSocket {
      * @return array
      * @throws \Exception
      */
-    public function paresePack($size = 2048) {
+    public function paresePack(int $size = 2048) {
         $pack_header_length = $this->client_pack_setting['package_body_offset'];
         $header_buff = fread($this->client, (int)$pack_header_length);
 
@@ -184,7 +184,7 @@ class RpcStreamClient extends AbstractSocket {
      * @throws  \Exception
      * @return  mixed
      */
-    public function reConnect($times = 1) {
+    public function reConnect(int $times = 1) {
         list($address, $flags) = $this->tcpStreamInitializer();
         if($this->isSwooleEnv() && $this->isPersistent()) {
             if(is_object($this->client)) {
@@ -255,9 +255,9 @@ class RpcStreamClient extends AbstractSocket {
 
     /**
      * setReadWriteTimeout
-     * @param $timeout
+     * @param int $timeout
      */
-    protected function setReadWriteTimeout($timeout) {
+    protected function setReadWriteTimeout(int $timeout = null) {
         if(isset($timeout)) {
             $rwtimeout = (float) $timeout;
             $rwtimeout = $rwtimeout > 0 ? $rwtimeout : -1;

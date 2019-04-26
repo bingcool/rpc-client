@@ -134,6 +134,12 @@ class RpcClientManager {
     public function getServices(string $serviceName = '', bool $persistent = false) {
         if($serviceName) {
             $key = md5($serviceName);
+            // 是否存在长连接
+            if($persistent) {
+                if(isset(self::$persistent_client_services[$key])) {
+                    return self::$persistent_client_services[$key];
+                }
+            }
             if(isset(self::$client_services[$key])) {
                 $client_service = unserialize(self::$client_services[$key]);
                 $client_service->connect();
@@ -144,6 +150,8 @@ class RpcClientManager {
                     if(!isset(self::$busy_client_services[$client_id])) {
                         self::$busy_client_services[$client_id] = $client_service;
                     }
+                }else {
+                    self::$persistent_client_services[$key] = $client_service;
                 }
                 return $client_service;
             }
@@ -163,18 +171,21 @@ class RpcClientManager {
 
     /**
      * @param string $serviceName
+     * @param string $persistent_client_name //强制产生一个新的长连接实例，默认获取心跳长连接实例
      */
-    public function getPersistentServices(string $serviceName = '') {
-        $client_key = md5($serviceName);
+    public function getPersistentServices(string $serviceName = '', string $persistent_client_name = null) {
+        $client_key = md5($serviceName.$persistent_client_name);
         if(isset(self::$persistent_client_services[$client_key])) {
             return self::$persistent_client_services[$client_key];
         }
         //长连接，则该client_service强制长连接
-        $client_service = $this->getServices($serviceName, true);
+        $client_service = $this->getServices($serviceName.$persistent_client_name, true);
         $client_service->setPersistent(true);
         $args = array_merge($client_service->getArgs(), ['persistent' => true]);
         $client_service->setArgs($args);
-        self::$persistent_client_services[$client_key] = $client_service;
+        if(!isset(self::$persistent_client_services[$client_key])) {
+            self::$persistent_client_services[$client_key] = $client_service;
+        }
         $this->destroyBusyClient($client_service->getClientId());
         return $client_service;
     }

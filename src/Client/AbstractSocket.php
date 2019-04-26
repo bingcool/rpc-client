@@ -505,7 +505,7 @@ abstract class AbstractSocket {
      * @param   int  $times
      * @return  void
      */
-    abstract public function reConnect($times = 1);
+    abstract public function reConnect(int $times = 1);
 
     /**
      * getSocketClient 获取当前的socket_client实例
@@ -666,7 +666,7 @@ abstract class AbstractSocket {
      * @param    int  $flags
      * @return   array
      */
-    abstract public function waitRecv($timeout = 5);
+    abstract public function waitRecv(float $timeout = 5, int $size = 2048, int $flags = 0);
 
     /**
      * getResponsePackData 获取服务返回的整包数据
