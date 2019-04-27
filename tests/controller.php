@@ -5,13 +5,13 @@ use Rpc\Client\RpcClientManager;
 
 class controller {
 	public function test() {
-		$callable = ['Service\Coms\Book\BookmanageService', 'test'];
+		$callable = ['RpcService\Coms\Book\BookmanageService', 'test'];
 		$params = ['content'=>'hhhhhhhhhhhhhhhh'];
 		$header = ['length'=>'', 'version'=>'1.0.1', 'name'=>'bingcool'];
 
 		$client1 = RpcClientManager::getInstance()->getServices('productService')->buildHeaderRequestId($header)->waitCall($callable, $params);
 
-		$callable = ['Service\Coms\Book\BookmanageService', 'test'];
+		$callable = ['RpcService\Coms\Book\BookmanageService', 'test'];
 		$params = ['content'=>'hhhhhhhhhhhhhhhh'];
 		$header = ['length'=>'', 'version'=>'1.0.1', 'name'=>'bingcool'];
 
@@ -22,7 +22,7 @@ class controller {
 		var_dump($res);
 
 
-		$callable = ['Service\Coms\Book\BookmanageService', 'test'];
+		$callable = ['RpcService\Coms\Book\BookmanageService', 'test'];
 		$params = ['content'=>'hhhhhhhhhhhhhhhh'];
 		$header = ['length'=>'', 'version'=>'1.0.1', 'name'=>'bingcool'];
 
