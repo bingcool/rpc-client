@@ -171,6 +171,11 @@ abstract class AbstractSocket {
     protected $args = [];
 
     /**
+     * @var null
+     */
+    protected $persistent_client_name = null;
+
+    /**
      * 定义序列化的方式
      */
     const SERIALIZE_TYPE = [
@@ -528,7 +533,7 @@ abstract class AbstractSocket {
     }
 
     /**
-     * setClientId 
+     * setClientId
      * @param string $client_id
      */
     public function setClientId(string $client_id) {
@@ -592,6 +597,19 @@ abstract class AbstractSocket {
         }
     }
 
+    /**
+     * @param string|null $persistent_client_name
+     */
+    public function setPersistentName(string $persistent_client_name = null) {
+        $this->persistent_client_name = $persistent_client_name;
+    }
+
+    /**
+     * @return null
+     */
+    public function getPersistentName() {
+        return $this->persistent_client_name;
+    }
     /**
      * isWultiRecv 判断是否是并行接收数据
      * @return boolean

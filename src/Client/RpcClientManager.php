@@ -131,15 +131,9 @@ class RpcClientManager {
      * @param    String   $serviceName
      * @return   object|array
      */
-    public function getServices(string $serviceName = '', bool $persistent = false) {
+    public function getServices(string $serviceName, bool $persistent = false) {
         if($serviceName) {
             $key = md5($serviceName);
-            // 是否存在长连接
-            if($persistent) {
-                if(isset(self::$persistent_client_services[$key])) {
-                    return self::$persistent_client_services[$key];
-                }
-            }
             if(isset(self::$client_services[$key])) {
                 $client_service = unserialize(self::$client_services[$key]);
                 $client_service->connect();
@@ -150,9 +144,8 @@ class RpcClientManager {
                     if(!isset(self::$busy_client_services[$client_id])) {
                         self::$busy_client_services[$client_id] = $client_service;
                     }
-                }else {
-                    self::$persistent_client_services[$key] = $client_service;
                 }
+
                 return $client_service;
             }
         }
@@ -179,8 +172,9 @@ class RpcClientManager {
             return self::$persistent_client_services[$client_key];
         }
         //长连接，则该client_service强制长连接
-        $client_service = $this->getServices($serviceName.$persistent_client_name, true);
+        $client_service = $this->getServices($serviceName, true);
         $client_service->setPersistent(true);
+        $client_service->setPersistentName($persistent_client_name);
         $args = array_merge($client_service->getArgs(), ['persistent' => true]);
         $client_service->setArgs($args);
         if(!isset(self::$persistent_client_services[$client_key])) {
@@ -275,9 +269,9 @@ class RpcClientManager {
     }
 
     /**
-     * 
+     *
      * @param array $client_services
-     */ 
+     */
     protected function createGroupMultiId($client_services = []) {
         $group_multi_id = '';
         foreach($client_services as $client_service) {
