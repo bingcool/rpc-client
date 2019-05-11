@@ -199,7 +199,7 @@ class RpcClientManager {
         $start_time = time();
         $group_multi_id = $this->createGroupMultiId($client_services);
         $this->response_pack_data[$group_multi_id] = [];
-        if(extension_loaded('swoole') && function_exists('defer') && defined('SWOOLEFY_VERSION') && class_exists('Swoolefy\\MPHP')) {
+        if($this->isSwoolefyEnv()) {
             if(\co::getCid() > 0) {
                 defer(function() use($group_multi_id) {
                     if(isset($this->response_pack_data[$group_multi_id])) {
@@ -216,7 +216,11 @@ class RpcClientManager {
                 $client_service->setRecvWay(RpcClientConst::MULTI_RECV);
                 $client_service->setGroupMultiId($group_multi_id);
             }
-            $ret = stream_select($read, $write, $error, 0.50);
+            if($this->isSwoolefyEnv()) {
+                $ret = swoole_select($read, $write, $error, 0.50);
+            }else {
+                $ret = stream_select($read, $write, $error, 0.50);
+            }
             if($ret) {
                 foreach($read as $k=>$socket) {
                     $client_id = $client_ids[$k];
@@ -410,6 +414,22 @@ class RpcClientManager {
         $request_id = $time_str.substr(md5($request_id), 0, $length - mb_strlen($time_str,'UTF8'));
         $header = array_merge($header_data, [$request_id_key => $request_id]);
         return $header;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isSwoolefyEnv() {
+        static $isSwoolefyEnv;
+        if(is_bool($isSwoolefyEnv)) {
+            return $isSwoolefyEnv;
+        }
+        if(extension_loaded('swoole') && function_exists('defer') && defined('SWOOLEFY_VERSION') && class_exists('Swoolefy\\MPHP')) {
+            $isSwoolefyEnv = true;
+        }else {
+            $isSwoolefyEnv = false;
+        }
+        return $isSwoolefyEnv;
     }
 
 }
