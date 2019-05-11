@@ -72,11 +72,20 @@ $heart_header_struct = array(
 
 // 注册产品服务
 $ser = RpcClientManager::getInstance()->registerService('productService', $serviceConfig1, $client_setting1, $server_header_struct1, $client_header_struct1, [
-
+    'persistent' => true
 ]);
 
-$obj = new \Rpc\Tests\controller();
 
-$obj->test();
+// 注册产品服务
+RpcClientManager::getInstance()->getPersistentServices('productService', 'mytest');
+
+while(true) {
+    $obj = new \Rpc\Tests\controller();
+
+    $obj->test();
+
+    sleep(3);
+}
+
 
 
