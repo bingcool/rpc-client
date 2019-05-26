@@ -216,11 +216,12 @@ class RpcClientManager {
                 $client_service->setRecvWay(RpcClientConst::MULTI_RECV);
                 $client_service->setGroupMultiId($group_multi_id);
             }
-            if($this->isSwoolefyEnv()) {
-                $ret = swoole_select($read, $write, $error, 0.50);
-            }else {
-                $ret = stream_select($read, $write, $error, 0.50);
-            }
+            // if($this->isSwoolefyEnv()) {
+            //    $ret = swoole_select($read, $write, $error, 0.5);
+            // }else {
+            //    $ret = stream_select($read, $write, $error, 0, 500000);
+            // }
+            $ret = stream_select($read, $write, $error, 0, 500000);
             if($ret) {
                 foreach($read as $k=>$socket) {
                     $client_id = $client_ids[$k];
