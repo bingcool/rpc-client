@@ -834,7 +834,7 @@ abstract class AbstractSocket {
      */
     public function decode($data, $unserialize_type = self::DECODE_JSON) {
         if(is_string($unserialize_type)) {
-            $serialize_type = strtolower($unserialize_type);
+            $unserialize_type = strtolower($unserialize_type);
             $unserialize_type = self::SERIALIZE_TYPE[$unserialize_type];
         }
         switch($unserialize_type) {
@@ -867,6 +867,9 @@ abstract class AbstractSocket {
         if(empty($eof)) {
             $eof = $this->pack_eof;
         }
+        if($this->server_serialize_type) {
+            $serialize_type = $this->server_serialize_type;
+        }
         $data = $this->encode($data, $serialize_type).$eof;
 
         return $data;
@@ -879,6 +882,9 @@ abstract class AbstractSocket {
      * @return  mixed
      */
     public function depackeof($data, $unserialize_type = self::DECODE_JSON) {
+        if($this->client_serialize_type) {
+            $unserialize_type = $this->client_serialize_type;
+        }
         return $this->decode($data, $unserialize_type);
     }
 

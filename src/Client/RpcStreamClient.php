@@ -137,38 +137,56 @@ class RpcStreamClient extends AbstractSocket {
      */
     public function paresePack(int $size = 2048) {
         $pack_header_length = $this->client_pack_setting['package_body_offset'];
-        $header_buff = fread($this->client, (int)$pack_header_length);
+        $left_header_length = (int)$pack_header_length;
+        $header_recv_buff = fread($this->client, $left_header_length);
+        while(($header_recv_length = strlen($header_recv_buff)) > 0) {
+            if($header_recv_length < $pack_header_length) {
+                $left_header_length = $pack_header_length - $header_recv_length;
+                $header_recv_buff .= fread($this->client, $left_header_length);
+                continue;
+            }
+            break;
+        }
+
+        $request_id = $this->getRequestId();
+        $client_body_buff = '';
+        $this->client_body_buff[$request_id] = '';
+
+        if(strlen($header_recv_buff) > $pack_header_length) {
+            $header_buff = substr($header_recv_buff, 0, $pack_header_length);
+            $client_body_buff .= substr($header_recv_buff, $pack_header_length);
+        }else {
+            $header_buff = $header_recv_buff;
+        }
 
         if($header_buff) {
             $client_pack_setting = $this->setUnpackLengthType();
             $header_data = unpack($client_pack_setting, $header_buff);
+            unset($header_recv_buff);
         }else {
             throw new \Exception("socket_read error: read header_buff return false, mey be timeout!");
         }
 
         if($header_data) {
-            $buff_length = $header_data[$this->pack_length_key];
-            $request_id = $this->getRequestId();
-            $this->client_body_buff[$request_id] = '';
-            $i = ceil($buff_length / $size);
-            do {
-                if($i == 1) {
-                    $size = $buff_length;
+            $body_buff_length = (int)$header_data[$this->pack_length_key];
+            do{
+                $current_recv_length = strlen($client_body_buff);
+                if($current_recv_length >= $body_buff_length) {
+                    $this->client_body_buff[$request_id] = substr($client_body_buff, 0, $body_buff_length);
+                    $client_body_buff = '';
+                    break;
                 }else {
-                    $buff_length = $buff_length - $size;
+                    if(($body_buff_length - $current_recv_length) < $size) {
+                        $buff = fread($this->client, $body_buff_length - $current_recv_length);
+                    }else {
+                        $buff = fread($this->client, $size);
+                    }
+                    $client_body_buff .= $buff;
                 }
-                $body_buff = fread($this->client, $size);
+            }while($client_body_buff);
 
-                if(strlen($body_buff) != $size) {
-                    break;
-                }
-                $this->client_body_buff[$request_id] .= $body_buff;
-                if($i == 1) {
-                    $body_data = $this->decode($this->client_body_buff[$request_id], $this->client_serialize_type);
-                    $response = [$header_data, $body_data];
-                    break;
-                }
-            }while(--$i);
+            $body_data = $this->decode($this->client_body_buff[$request_id], $this->client_serialize_type);
+            $response = [$header_data, $body_data];
 
             if($response) {
                 unset($this->client_body_buff[$request_id]);

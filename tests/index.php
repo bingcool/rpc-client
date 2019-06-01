@@ -37,7 +37,8 @@ $client_header_struct1 = array(
 $serviceConfig2 = array(
 	'servers' => '192.168.99.103:9506',
 	'timeout' => 0.5,
-	'noblock' => 0
+	'noblock' => 0,
+    'serialize_type' => 'json'
 );
 
 
