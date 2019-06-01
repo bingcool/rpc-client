@@ -153,8 +153,8 @@ class RpcStreamClient extends AbstractSocket {
         $this->client_body_buff[$request_id] = '';
 
         if(strlen($header_recv_buff) > $pack_header_length) {
-            $header_buff = substr($header_recv_buff, 0, $pack_header_length);
-            $client_body_buff .= substr($header_recv_buff, $pack_header_length);
+            $header_buff = mb_strcut($header_recv_buff, 0, $pack_header_length, "UTF-8");
+            $client_body_buff .= mb_strcut($header_recv_buff, $pack_header_length, null, "UTF-8");
         }else {
             $header_buff = $header_recv_buff;
         }
@@ -172,7 +172,7 @@ class RpcStreamClient extends AbstractSocket {
             do{
                 $current_recv_length = strlen($client_body_buff);
                 if($current_recv_length >= $body_buff_length) {
-                    $this->client_body_buff[$request_id] = substr($client_body_buff, 0, $body_buff_length);
+                    $this->client_body_buff[$request_id] = mb_strcut($client_body_buff, 0, $body_buff_length,"UTF-8");
                     $client_body_buff = '';
                     break;
                 }else {
