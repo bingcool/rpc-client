@@ -135,7 +135,7 @@ class RpcStreamClient extends AbstractSocket {
      * @return array
      * @throws \Exception
      */
-    public function paresePack(int $size = 2048) {
+    public function paresePack(int $size = 8192) {
         $pack_header_length = $this->client_pack_setting['package_body_offset'];
         $left_header_length = (int)$pack_header_length;
         $header_recv_buff = fread($this->client, $left_header_length);
