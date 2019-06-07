@@ -45,11 +45,11 @@ class RpcTextClient extends RpcStreamClient {
         }
     }
 
-    public function waitRecv(float $timeout = 10, int $size = 2048, int $flags = 0) {
+    public function waitRecv(float $timeout = 10, int $size = 8192, int $flags = 0) {
         // 设置读取超时
         $this->setReadWriteTimeout($timeout);
         // 等待获取数据
-
+        
     }
 
     /**
@@ -57,8 +57,8 @@ class RpcTextClient extends RpcStreamClient {
      * @return array
      * @throws \Exception
      */
-    public function paresePack(int $size = 2048) {
-
+    public function paresePack(int $size = 8192) {
+        
     }
 
 }

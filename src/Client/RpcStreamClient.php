@@ -95,7 +95,7 @@ class RpcStreamClient extends AbstractSocket {
      * @throws   \Exception
      * @return   array
      */
-    public function waitRecv(float $timeout = 10, int $size = 2048, int $flags = 0) {
+    public function waitRecv(float $timeout = 10, int $size = 8192, int $flags = 0) {
         if($size > 8192) {
             throw new \Exception( 'params $size must less than 8192');
         }
