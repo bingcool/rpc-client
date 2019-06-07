@@ -41,7 +41,7 @@ class RpcSwooleClient extends AbstractSocket {
 
     /**
      * connect 连接
-     * @param  syting  $host   
+     * @param  string  $host
      * @param  string  $port   
      * @param  float   $tomeout
      * @param  integer $noblock
@@ -75,7 +75,7 @@ class RpcSwooleClient extends AbstractSocket {
      * @param   string   $callable
      * @param   mixed    $params数据序列化模式
      * @param   array    $header  数据包头数据，如果要传入该参数，则必须是由buildHeaderRequestId()函数产生返回的数据
-     * @return  boolean
+     * @return  $this
      */
 	public function waitCall($callable, $params, array $header = []) {
 	    $this->callParams = [$callable, $params, $header];
@@ -172,6 +172,7 @@ class RpcSwooleClient extends AbstractSocket {
     /**
      * reConnect  最多尝试重连次数，默认尝试重连1次
      * @param   int  $times
+     * @throws  \Exception
      * @return  void
      */
     public function reConnect($times = 1) {
