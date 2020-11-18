@@ -15,7 +15,7 @@ class RpcClientManager {
 
     /**
      * $instance 单例实例
-     * @var [type]
+     * @var RpcClientManager
      */
     protected static $instance;
 
@@ -65,7 +65,7 @@ class RpcClientManager {
     /**
      * getInstance  创建单例实例
      * @param  mixed $args
-     * @return mixed
+     * @return RpcClientManager
      */
     public static function getInstance(...$args) {
         if(!isset(self::$instance)){
@@ -76,44 +76,47 @@ class RpcClientManager {
 
     /**
      * registerService 注册服务
-     * @param    string    $serviceName
-     * @param    array     $serviceConfig
-     * @param    array     $setting
-     * @param    array     $header_struct
-     * @param    string    $pack_length_key
-     * @return   object
+     * @param string $serviceName
+     * @param array $clientSetting
+     * @param array $serviceConfig
+     * @param array $packetConfig
+     * @param array $args
+     * @return $this
      */
     public function registerService(
         string $serviceName,
-        array $serviceConfig = [],
-        array $client_pack_setting = [],
-        array $server_header_struct = [],
-        array $client_header_struct = [],
+        array $clientSetting,
+        array $serviceConfig,
+        array $packetConfig,
         array $args = []
     ) {
-        $servers = $serviceConfig['servers'];
+        $host = $serviceConfig['host'];
+        $port = $serviceConfig['port'];
+        $address = [$host, $port];
         $timeout = $serviceConfig['timeout'];
         $noblock = isset($serviceConfig['noblock']) ? $serviceConfig['noblock'] : 0;
-        $server_serialize_type = isset($serviceConfig['serialize_type']) ? $serviceConfig['serialize_type'] : 'json';
+        $server_serialize_type = isset($packetConfig['server']['serialize_type']) ? $packetConfig['server']['serialize_type'] : 'json';
         $key = md5($serviceName);
 
         if(!isset(self::$client_services[$key])) {
-            self::$client_pack_setting[$key] = $client_pack_setting;
-            $pack_length_key = isset($args['pack_length_key']) ? $args['pack_length_key'] : 'length';
-            $client_serialize_type = isset($args['client_serialize_type']) ? $args['client_serialize_type'] : 'json';
+            self::$client_pack_setting[$key] = $clientSetting;
+            $pack_length_key = isset($packetConfig['client']['pack_length_key']) ? $packetConfig['client']['pack_length_key'] : 'length';
+            $client_serialize_type = isset($packetConfig['client']['client_serialize_type']) ? $packetConfig['client']['client_serialize_type'] : 'json';
+            $server_header_struct = $packetConfig['server']['pack_header_struct'];
+            $client_header_struct = $packetConfig['client']['pack_header_struct'];
             $swoole_keep = false;
             $persistent = false;
 
-            if(isset($args['swoole_keep'])) {
+            if(isset($serviceConfig['swoole_keep'])) {
                 $swoole_keep = filter_var($args['persistent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
                 $swoole_keep = (boolean)$swoole_keep;
             }
-            if(isset($args['persistent'])) {
-                $persistent = filter_var($args['persistent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if(isset($serviceConfig['persistent'])) {
+                $persistent = filter_var($serviceConfig['persistent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
                 $persistent = (boolean)$persistent;
             }
-            $client_service = new RpcStreamClient($client_pack_setting, $server_header_struct, $client_header_struct, $pack_length_key);
-            $client_service->addServer($servers, $timeout, $noblock);
+            $client_service = new RpcStreamClient($clientSetting, $server_header_struct, $client_header_struct, $pack_length_key);
+            $client_service->addServer($address, $timeout, $noblock);
             $client_service->setClientServiceName($serviceName);
             $client_service->setClientSerializeType($client_serialize_type);
             $client_service->setServerSerializeType($server_serialize_type);
@@ -129,7 +132,7 @@ class RpcClientManager {
     /**
      * getService 获取某个服务实例|所有正在工作的服务
      * @param    String   $serviceName
-     * @return   object|array
+     * @return   AbstractSocket|array
      */
     public function getServices(string $serviceName, bool $persistent = false) {
         if($serviceName) {
@@ -200,7 +203,7 @@ class RpcClientManager {
         $group_multi_id = $this->createGroupMultiId($client_services);
         $this->response_pack_data[$group_multi_id] = [];
         if($this->isSwoolefyEnv()) {
-            if(\co::getCid() > 0) {
+            if(\Swoole\Coroutine::getCid() > 0) {
                 defer(function() use($group_multi_id) {
                     if(isset($this->response_pack_data[$group_multi_id])) {
                         unset($this->response_pack_data[$group_multi_id]);
@@ -400,8 +403,8 @@ class RpcClientManager {
      * buildHeader  重建header的数据，产生一个唯一的请求串号id
      * @param    array   $header_data
      * @param    string  $request_id_key
-     * @param    string  $length     默认12字节
-     * @throws   \Exception
+     * @param    string  $length   默认12字节
+     * @throws   Exception
      * @return   array
      */
     public function buildHeaderRequestId(array $header_data, string $request_id_key = 'request_id', int $length = 26) {

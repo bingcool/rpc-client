@@ -12,6 +12,25 @@
 namespace Rpc\Client;
 
 abstract class AbstractSocket {
+
+    /**
+     * json
+     */
+    const DECODE_JSON = 1;
+
+    /**
+     * php serialize
+     */
+    const DECODE_PHP = 2;
+
+    /**
+     * 定义序列化的方式
+     */
+    const SERIALIZE_TYPE = [
+        'json' => 1,
+        'serialize' => 2,
+    ];
+
     /**
      * $client client对象
      * @var [type]
@@ -176,19 +195,6 @@ abstract class AbstractSocket {
     protected $persistent_client_name = null;
 
     /**
-     * 定义序列化的方式
-     */
-    const SERIALIZE_TYPE = [
-        'json' => 1,
-        'serialize' => 2,
-        'swoole' => 3
-    ];
-
-    const DECODE_JSON = 1;
-    const DECODE_PHP = 2;
-    const DECODE_SWOOLE = 3;
-
-    /**
      * __construct 初始化
      * @param array $setting
      */
@@ -265,7 +271,6 @@ abstract class AbstractSocket {
     public function getClientPackSetting() {
         return $this->client_pack_setting;
     }
-
 
     /**
      * setClientServiceName 设置当前的客户端实例的对应服务名
@@ -744,13 +749,14 @@ abstract class AbstractSocket {
      * @return mixed
      */
     public function enpack($data, $header, array $header_struct = [], $pack_length_key ='length', $serialize_type = self::DECODE_JSON) {
-        $body = $this->encode($data, $serialize_type);
-        $bin_header_data = '';
-
         if(empty($header_struct)) {
             throw new \Exception('you must set the $header_struct');
         }
-
+        $body = $this->encode($data, $serialize_type);
+        $bin_header_data = '';
+        if(!isset($header[$pack_length_key])) {
+            $header[$pack_length_key] = '';
+        }
         foreach($header_struct as $key=>$value) {
             if(isset($header[$key])) {
                 // 计算包体长度

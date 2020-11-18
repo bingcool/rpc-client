@@ -5,80 +5,77 @@ include "../vendor/autoload.php";
 use Rpc\Client\RpcClientManager;
 
 $serviceConfig1 = [
-	'servers' => '192.168.99.103:9504',
-	'timeout' => 0.5,
-	'noblock' => 0
+    'host' => '127.0.0.1',
+    'port' => '9504',
+    'timeout' => 3,
+    'noblock' => true,
+    'swoole_keep' => false,
+    'persistent' => false
 ];
 
-$client_setting1 = array(
-	'open_length_check'     => 1,
+$clientSetting1 = array(
+    'open_length_check'     => 1,
     'package_length_type'   => 'N',
     'package_length_offset' => 0,       //第N个字节是包长度的值
-    'package_body_offset'   => 70,       //第几个字节开始计算长度
+    'package_body_offset'   => 40,       //第几个字节开始计算长度
     'package_max_length'    => 2000000,  //协议最大长度
 );
 
-$server_header_struct1 = array(
-	'length'=>'N', 
-	'version'=>'a10', 
-	'name'=>'a30', 
-	'request_id'=>'a26'
-);
+$packetConfig1 = [
+    // 服务端设置,客户端需要
+    'server' => [
+        // 定义包头字段和对应的所占字节大小
+        'pack_header_struct' => ['length'=>'N', 'version'=>'a10', 'request_id'=>'a26'],
+        'pack_length_key' => 'length',
+        'serialize_type' => 'json',
+        'pack_check_type' => 'N',
+    ],
+    // 客户端设置
+    'client' => [
+        'pack_header_struct' => ['length'=>'N', 'version'=>'a10', 'request_id'=>'a26'],
+        'pack_length_key' => 'length',
+        'serialize_type' => 'json',
+        'pack_check_type' => 'N',
+    ]
+];
 
-$client_header_struct1 = array(
-	'length'=>'N', 
-	'version'=>'a10', 
-	'name'=>'a30', 
-	'request_id'=>'a26'
-);
+$serviceConfig2 = [
+    'host' => '127.0.0.1',
+    'port' => '9505',
+    'timeout' => 3,
+    'noblock' => true
+];
 
-
-
-$serviceConfig2 = array(
-	'servers' => '192.168.99.103:9506',
-	'timeout' => 0.5,
-	'noblock' => 0,
-    'serialize_type' => 'json'
-);
-
-
-$client_setting2= array(
-	'open_length_check'     => 1,
+$clientSetting2 = array(
+    'open_length_check'     => 1,
     'package_length_type'   => 'N',
     'package_length_offset' => 0,       //第N个字节是包长度的值
-    'package_body_offset'   => 70,       //第几个字节开始计算长度
+    'package_body_offset'   => 40,       //第几个字节开始计算长度
     'package_max_length'    => 2000000,  //协议最大长度
 );
 
-$server_header_struct2 = array(
-	'length'=>'N', 
-	'version'=>'a10', 
-	'name'=>'a30', 
-	'request_id'=>'a26'
-);
-
-$client_header_struct2 = array(
-	'length'=>'N', 
-	'version'=>'a10', 
-	'name'=>'a30', 
-	'request_id'=>'a26'
-);
-
-$heart_header_struct = array(
-	'length'=>'N', 
-	'version'=>'a10', 
-	'name'=>'a30', 
-	'request_id'=>'ping'
-);
+$packetConfig2 = [
+    // 服务端设置,客户端需要
+    'server' => [
+        // 定义包头字段和对应的所占字节大小
+        'pack_header_struct' => ['length'=>'N', 'version'=>'a10', 'request_id'=>'a26'],
+        'pack_length_key' => 'length',
+        'serialize_type' => 'json',
+        'pack_check_type' => 'N',
+    ],
+    // 客户端设置
+    'client' => [
+        'pack_header_struct' => ['length'=>'N', 'version'=>'a10', 'request_id'=>'a26'],
+        'pack_length_key' => 'length',
+        'serialize_type' => 'json',
+        'pack_check_type' => 'N',
+    ]
+];
 
 // 注册产品服务
-$ser = RpcClientManager::getInstance()->registerService('productService', $serviceConfig1, $client_setting1, $server_header_struct1, $client_header_struct1, [
-    'persistent' => true
-]);
-
-
-// 注册产品服务
-RpcClientManager::getInstance()->getPersistentServices('productService', 'mytest');
+$ser = RpcClientManager::getInstance(true)->registerService('productService', $serviceConfig1, $clientSetting1, $packetConfig1);
+// 注册订单服务 
+RpcClientManager::getInstance(true)->registerService('orderService', $serviceConfig2, $clientSetting2, $packetConfig2);
 
 while(true) {
     $obj = new \Rpc\Tests\controller();

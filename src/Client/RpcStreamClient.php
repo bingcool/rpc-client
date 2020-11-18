@@ -23,15 +23,14 @@ class RpcStreamClient extends AbstractSocket {
      * @return mixed
      */
     public function connect($host = null, $port = null , $timeout = 0.5, $noblock = 0) {
+        if(!extension_loaded('sockets')) {
+            throw new \Exception("Error Creating Stream: missing socket extension, please install it");
+        }
         if(!empty($host) && !empty($port)) {
             $this->remote_servers[] = [$host, $port];
             $this->timeout = $timeout;
         }
-        if(extension_loaded('sockets')) {
-            $this->reConnect();
-        }else {
-            throw new \Exception("Error Creating Stream: missing socket extension, please install it");
-        }
+        $this->reConnect();
     }
 
     /**
@@ -164,7 +163,7 @@ class RpcStreamClient extends AbstractSocket {
             $header_data = unpack($client_pack_setting, $header_buff);
             unset($header_recv_buff);
         }else {
-            throw new \Exception("socket_read error: read header_buff return false, mey be timeout!");
+            throw new \Exception("Socket Error: read header_buff return false, mey be timeout!");
         }
 
         if($header_data) {
